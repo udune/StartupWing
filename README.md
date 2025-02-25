@@ -5,14 +5,14 @@ Addressable, Language, Player, RoomProperty, Server, Sound, UI
 
 ** 디테일한 코드는 유출이 불가해서 참조를 하지 못했습니다.
 
-[PlayerManager]
-public class PlayerData
-{
-    public AvatarPartsInfo.AvatarPartsData avatarData;
-}
+    [PlayerManager]
+    public class PlayerData
+    {
+        public AvatarPartsInfo.AvatarPartsData avatarData;
+    }
 
-public class PlayerManager : MonoBehaviour
-{
+    public class PlayerManager : MonoBehaviour
+    {
     // Player Data (아바타 파츠 데이터) 를 다른 객체에서 호출할수 있습니다.
     public static PlayerData PlayerData => _playerData;
     private static PlayerData _playerData = new PlayerData();
