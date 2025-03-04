@@ -1,12 +1,12 @@
 # StartupWing
 
-Addressable, Language, Player, RoomProperty, Server, Sound, UI
-큰 부분을 singleton 객체로 만들어서 구현했습니다.
+## Addressable, Language, Player, RoomProperty, Server, Sound, UI
+## 큰 부분을 singleton 객체로 만들어서 구현했습니다.
 
-** 디테일한 코드는 유출이 불가해서 참조를 하지 못했습니다.
+## ** 디테일한 코드는 유출이 불가해서 참조를 하지 못했습니다.
 
-# [PlayerManager]
-  # SubscribeRPC, UnsubscribeRPC, SubscribeVoiceChat 등의 메서드로 이벤트 구독/해제를 관리.
+### [PlayerManager]
+  #### SubscribeRPC, UnsubscribeRPC, SubscribeVoiceChat 등의 메서드로 이벤트 구독/해제를 관리.
     private void SubscribeRPC()
     {
         _rpcModel.OnEmojiIcon += _emojiIconController.SetEmoji;
@@ -31,7 +31,7 @@ Addressable, Language, Player, RoomProperty, Server, Sound, UI
         _rpcModel.OnVoiceChat -= _playerView.PlayBilnkAnimation;
     }
    
-  # PlayerAvatarCreate에서 await avatarModelController.CreateModel(...)을 사용하여 비동기 로직을 적용.
+  #### PlayerAvatarCreate에서 await avatarModelController.CreateModel(...)을 사용하여 비동기 로직을 적용.
        public async void PlayerAvatarCreate(Transform respawn = null)
         {
         Vector3 position = respawn?.position ?? Vector3.zero;
@@ -57,8 +57,8 @@ Addressable, Language, Player, RoomProperty, Server, Sound, UI
         PlayerAvatarSetting(_playerAvatarObject);
         }
 
-# [LanguageManager]
-  # Action 이벤트를 활용한 언어 변경 감지
+### [LanguageManager]
+  #### Action 이벤트를 활용한 언어 변경 감지
     private static void SetLanguage(int value)
     {
         index = value;
@@ -80,7 +80,7 @@ Addressable, Language, Player, RoomProperty, Server, Sound, UI
         OnChangedLanguage?.Invoke();
     }
   
-  # Dictionary를 사용한 npcMessage 관리
+  #### Dictionary를 사용한 npcMessage 관리
     public static List<string> GetNPCMessageList(string sceneName)
     {
         List<string> messageList;
@@ -107,8 +107,8 @@ Addressable, Language, Player, RoomProperty, Server, Sound, UI
         return messageList;
     }
   
-# [AudioManager]
-  # Dictionary<string, AudioClip>을 이용한 오디오 캐싱 최적화
+### [AudioManager]
+  #### Dictionary<string, AudioClip>을 이용한 오디오 캐싱 최적화
     async void LoadAsyncAudioClip(string _soundName, Action<AudioClip> action)
     {
         if (_audioClips.TryGetValue(_soundName, out AudioClip audioClip))
@@ -135,9 +135,9 @@ Addressable, Language, Player, RoomProperty, Server, Sound, UI
         }
     }
 
-# [UIManager]
-  # Dictionary<string, GameObject>를 활용한 UI 캐싱
-  # CreateUI<T>()에서 부모(Parent) 지정 가능
+### [UIManager]
+  #### Dictionary<string, GameObject>를 활용한 UI 캐싱
+  #### CreateUI<T>()에서 부모(Parent) 지정 가능
     public T GetUI<T>(Transform parent = null) where T : Component
     {
         if (UIList.ContainsKey(typeof(T).Name) && UIList[typeof(T).Name] != null)
@@ -146,7 +146,7 @@ Addressable, Language, Player, RoomProperty, Server, Sound, UI
             return CreateUI<T>(parent);
     }
 
-  # OpenToast()로 간편한 토스트 메시지 UI 생성
+  #### OpenToast()로 간편한 토스트 메시지 UI 생성
     public void OpenToast(string toast, float timer = 3f, bool Center = true)
     {
         UIToast Toast = null;
