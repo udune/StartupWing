@@ -109,7 +109,28 @@ Addressable, Language, Player, RoomProperty, Server, Sound, UI
   
 # [AudioManager]
   # Dictionary<string, AudioClip>을 이용한 오디오 캐싱 최적화
-    if (_audioClips.TryGetValue(_soundName, out AudioClip audioClip))
+    async void LoadAsyncAudioClip(string _soundName, Action<AudioClip> action)
     {
-        action?.Invoke(audioClip);
+        if (_audioClips.TryGetValue(_soundName, out AudioClip audioClip))
+        {
+            action?.Invoke(audioClip);
+        }
+        else
+        {
+            AsyncOperationHandle<AudioClip> handle = Addressables.LoadAssetAsync<AudioClip>(_soundName);
+            await handle.Task;
+
+            if (handle.Status.Equals(AsyncOperationStatus.Succeeded))
+            {
+                AudioClip result = Instantiate(handle.Result);
+                _audioClips.Add(_soundName, result);
+                action?.Invoke(result);
+            }
+            else
+                Debug.LogError(handle.OperationException);
+
+    #if UNITY_WEBGL
+            Addressables.Release(handle);
+    #endif
+        }
     }
