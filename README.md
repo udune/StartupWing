@@ -5,7 +5,7 @@ Addressable, Language, Player, RoomProperty, Server, Sound, UI
 
 ** 디테일한 코드는 유출이 불가해서 참조를 하지 못했습니다.
 
-[PlayerManager]
+# [PlayerManager]
   # SubscribeRPC, UnsubscribeRPC, SubscribeVoiceChat 등의 메서드로 이벤트 구독/해제를 관리.
     private void SubscribeRPC()
     {
@@ -56,6 +56,7 @@ Addressable, Language, Player, RoomProperty, Server, Sound, UI
 
         PlayerAvatarSetting(_playerAvatarObject);
         }
-        
-  # SetLayerRecursively, PlayerAvatarSetting, SetPhotonObserved 등의 함수로 중복을 줄임.
 
+# [LanguageManager]
+  # Action 이벤트를 활용한 언어 변경 감지
+  # Dictionary를 사용한 npcMessage 관리
