@@ -1,9 +1,9 @@
 # StartupWing
 
-## *Addressable, Language, Player, RoomProperty, Server, Sound, UI 큰 부분을 singleton 객체로 만들어서 구현했습니다.*
+## **Addressable, Language, Player, RoomProperty, Server, Sound, UI 큰 부분을 singleton 객체로 만들어서 구현했습니다.**
 ####### ** 디테일한 코드는 유출이 불가해서 참조를 하지 못했습니다.
 
-### *[PlayerManager]*
+### **[PlayerManager]**
   #### SubscribeRPC, UnsubscribeRPC, SubscribeVoiceChat 등의 메서드로 이벤트 구독/해제를 관리.
     private void SubscribeRPC()
     {
@@ -55,7 +55,7 @@
         PlayerAvatarSetting(_playerAvatarObject);
         }
 
-### *[LanguageManager]*
+### **[LanguageManager]**
   #### Action 이벤트를 활용한 언어 변경 감지
     private static void SetLanguage(int value)
     {
@@ -105,7 +105,7 @@
         return messageList;
     }
   
-### *[AudioManager]*
+### **[AudioManager]**
   #### Dictionary<string, AudioClip>을 이용한 오디오 캐싱 최적화
     async void LoadAsyncAudioClip(string _soundName, Action<AudioClip> action)
     {
@@ -133,7 +133,7 @@
         }
     }
 
-### *[UIManager]*
+### **[UIManager]**
   #### Dictionary<string, GameObject>를 활용한 UI 캐싱
   #### CreateUI<T>()에서 부모(Parent) 지정 가능
     public T GetUI<T>(Transform parent = null) where T : Component
@@ -154,7 +154,7 @@
         Toast.SetToast(toast, timer, Center);
     }
 
-### *[ServerManager]*
+### **[ServerManager]**
   #### 비동기 요청 처리 (Coroutine 활용)
     CoroutineQueue corQueue = new CoroutineQueue();
 
