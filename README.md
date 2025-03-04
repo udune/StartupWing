@@ -134,3 +134,24 @@ Addressable, Language, Player, RoomProperty, Server, Sound, UI
     #endif
         }
     }
+
+# [UIManager]
+  # Dictionary<string, GameObject>를 활용한 UI 캐싱
+  # CreateUI<T>()에서 부모(Parent) 지정 가능
+    public T GetUI<T>(Transform parent = null) where T : Component
+    {
+        if (UIList.ContainsKey(typeof(T).Name) && UIList[typeof(T).Name] != null)
+            return UIList[typeof(T).Name].GetComponent<T>();
+        else
+            return CreateUI<T>(parent);
+    }
+
+  # OpenToast()로 간편한 토스트 메시지 UI 생성
+    public void OpenToast(string toast, float timer = 3f, bool Center = true)
+    {
+        UIToast Toast = null;
+
+        Toast = CreateUI<UIToast>();
+
+        Toast.SetToast(toast, timer, Center);
+    }
