@@ -31,7 +31,7 @@ Addressable, Language, Player, RoomProperty, Server, Sound, UI
         _rpcModel.OnVoiceChat -= _playerView.PlayBilnkAnimation;
     }
    
-  # PlayerAvatarCreate에서 await _avatarModelController.CreateModel(...)을 사용하여 비동기 로직을 적용.
+  # PlayerAvatarCreate에서 await avatarModelController.CreateModel(...)을 사용하여 비동기 로직을 적용.
        public async void PlayerAvatarCreate(Transform respawn = null)
         {
         Vector3 position = respawn?.position ?? Vector3.zero;
@@ -107,3 +107,9 @@ Addressable, Language, Player, RoomProperty, Server, Sound, UI
         return messageList;
     }
   
+# [AudioManager]
+  # Dictionary<string, AudioClip>을 이용한 오디오 캐싱 최적화
+    if (_audioClips.TryGetValue(_soundName, out AudioClip audioClip))
+    {
+        action?.Invoke(audioClip);
+    }
