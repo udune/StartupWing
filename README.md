@@ -59,4 +59,51 @@ Addressable, Language, Player, RoomProperty, Server, Sound, UI
 
 # [LanguageManager]
   # Action 이벤트를 활용한 언어 변경 감지
+    private static void SetLanguage(int value)
+    {
+        index = value;
+        PlayerPrefs.SetInt(LANGUAGE_KEY, index);
+    #if !UNITY_EDITOR
+      //  SaveLangToLocalStorage(index);
+    #endif
+        OnChangedLanguage?.Invoke();
+    }
+
+    public static void SetLanguage(string countryCode)
+    {
+        index = countryCodes.IndexOf(countryCode) - 1;
+
+        PlayerPrefs.SetInt(LANGUAGE_KEY, index);
+    #if !UNITY_EDITOR
+      //  SaveLangToLocalStorage(index);
+    #endif
+        OnChangedLanguage?.Invoke();
+    }
+  
   # Dictionary를 사용한 npcMessage 관리
+    public static List<string> GetNPCMessageList(string sceneName)
+    {
+        List<string> messageList;
+        List<Language> language;
+
+        if (!npcMessage.TryGetValue(sceneName, out language))
+        {
+            language = languages.FindAll(o => o.Code.Contains(sceneName));
+        }
+
+        messageList = language.Select(o => o.Languages[index]).ToList();
+
+        for (int i = 0; i < messageList.Count; i++)
+        {
+            if (index == 2) // 일본어 데이터 load시 불필요 공백 및 \r 추가 제거
+            {
+                messageList[i] = messageList[i].Replace("\r", "");
+                messageList[i] = messageList[i].Replace(" ", "");
+            }
+
+            messageList[i] = messageList[i].Replace("<N>", "\n");
+        }
+
+        return messageList;
+    }
+  
