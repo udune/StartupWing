@@ -7,60 +7,67 @@ using Newtonsoft.Json;
 
 public class ServerManager : Singleton<ServerManager>
 {
-    CoroutineQueue corQueue = new CoroutineQueue();
+    private CoroutineQueue corQueue = new CoroutineQueue();
 
-    public void APIPostRequest<T>(string url, Hashtable postData, Action<T> act = null) 
+    public void APIPostRequest<T>(string url, Hashtable postData, Action<T> callback = null) 
     {
-        corQueue.StartCoroutines(WebPost(url, postData, act), StartCoroutine);
+        corQueue.StartCoroutines(ExecuteWebRequest<T>(url, postData, WebRequestType.POST, callback), StartCoroutine);
     }
 
-    public void APIGetRequest<T>(string url, Action<T> act = null)
+    public void APIGetRequest<T>(string url, Action<T> callback = null)
     {
-        corQueue.StartCoroutines(WebGet(url, act), StartCoroutine);
+        corQueue.StartCoroutines(ExecuteWebRequest<T>(url, null, WebRequestType.GET, callback), StartCoroutine);
     }
 
-    #region Web
-    public IEnumerator WebPost<T>(string _url, Hashtable _postData, Action<T> _act = null)
+    #region Web Requests
+    private enum WebRequestType
     {
-        var jsonString = JsonConvert.SerializeObject(_postData);
+        GET,
+        POST
+    }
 
-        using UnityWebRequest www = UnityWebRequest.PostWwwForm(_url, jsonString);
-        byte[] jsonToSend = new UTF8Encoding().GetBytes(jsonString);
-        www.uploadHandler.Dispose();
-        www.uploadHandler = new UploadHandlerRaw(jsonToSend);
-        www.SetRequestHeader("Content-Type","application/json");
+    private IEnumerator ExecuteWebRequest<T>(string url, Hashtable postData, WebRequestType requestType, Action<T> callback)
+    {
+        using UnityWebRequest www = CreateWebRequest(url, postData, requestType);
 
         yield return www.SendWebRequest();
 
         if (IsWebRequestError(www.result))
-            Debug.Log($"<color=red>Server Error : {www.error}</color> // {_url}");
+        {
+            Debug.LogError($"<color=red>Server Error : {www.error}</color> // {url}");
+        }
         else
         {
-            Debug.Log($"<color=yellow>Server Responce : {_url}</color> // {www.downloadHandler.text}");
+            Debug.Log($"<color=yellow>Server Response : {url}</color> // {www.downloadHandler.text}");
             var data = JsonUtility.FromJson<T>(www.downloadHandler.text);
-            _act?.Invoke(data);
+            callback?.Invoke(data);
         }
     }
 
-    public IEnumerator WebGet<T>(string _url, Action<T> _act = null)
+    private UnityWebRequest CreateWebRequest(string url, Hashtable postData, WebRequestType requestType)
     {
-        using UnityWebRequest www = UnityWebRequest.Get(_url);
-        yield return www.SendWebRequest();
+        UnityWebRequest www;
 
-        if (IsWebRequestError(www.result))
-            Debug.Log($"<color=red>Server Error : {www.error}</color> // {_url}");
+        if (requestType == WebRequestType.POST)
+        {
+            var jsonString = JsonConvert.SerializeObject(postData);
+            byte[] jsonToSend = new UTF8Encoding().GetBytes(jsonString);
+
+            www = UnityWebRequest.PostWwwForm(url, string.Empty);
+            www.uploadHandler = new UploadHandlerRaw(jsonToSend);
+            www.SetRequestHeader("Content-Type", "application/json");
+        }
         else
         {
-            Debug.Log($"<color=yellow>Server Responce : {_url}</color> // {www.downloadHandler.text}");
-            var data = JsonUtility.FromJson<T>(www.downloadHandler.text);
-            _act?.Invoke(data);
+            www = UnityWebRequest.Get(url);
         }
+
+        return www;
     }
     #endregion
 
-    bool IsWebRequestError(UnityWebRequest.Result _result)
+    private bool IsWebRequestError(UnityWebRequest.Result result)
     {
-        return _result.Equals(UnityWebRequest.Result.ProtocolError) ||
-                _result.Equals(UnityWebRequest.Result.ConnectionError);
+        return result == UnityWebRequest.Result.ProtocolError || result == UnityWebRequest.Result.ConnectionError;
     }
 }
