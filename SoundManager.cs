@@ -28,7 +28,9 @@ public class SoundManager : Singleton<SoundManager>
     [SerializeField] AudioSource _sfxSources;
     [SerializeField] AudioSource _alarmSources;
     [SerializeField] AudioMixer _audioMixer;
+
     private Dictionary<string, AudioClip> _audioClips = new Dictionary<string, AudioClip>();
+
     private float _masterDBVolume = -15;
     private float _bgmDBVolume = -15;
     private float _sfxDBVolume = -15;
@@ -40,22 +42,41 @@ public class SoundManager : Singleton<SoundManager>
         _bgmDBVolume = PlayerPrefs.GetFloat(Volume.BGM, -15);
         _sfxDBVolume = PlayerPrefs.GetFloat(Volume.SFX, -15);
         _alarmDBVolume = PlayerPrefs.GetFloat(Volume.ALARM, -15);
+        ApplyVolumeSettings();
+    }
+
+    private void ApplyVolumeSettings()
+    {
         _audioMixer.SetFloat(Volume.MASTER, _masterDBVolume);
         _audioMixer.SetFloat(Volume.BGM, _bgmDBVolume);
         _audioMixer.SetFloat(Volume.SFX, _sfxDBVolume);
         _audioMixer.SetFloat(Volume.ALARM, _alarmDBVolume);
     }
 
-    public void PlayBGM(string _soundName)
+    public void PlaySound(string soundName, AudioSource source, bool loop = false)
     {
-        LoadAsyncAudioClip(_soundName, (result) =>
+        LoadAsyncAudioClip(soundName, (clip) =>
         {
-            StopBGM();
-            _bgmSource.clip = result;
-            _bgmSource.loop = true;
-            _bgmSource.enabled = true;
-            _bgmSource.Play();
+            source.clip = clip;
+            source.loop = loop;
+            source.enabled = true;
+            source.Play();
         });
+    }
+
+    public void PlayBGM(string soundName)
+    {
+        PlaySound(soundName, _bgmSource, true);
+    }
+
+    public void PlaySE(string soundName)
+    {
+        PlaySound(soundName, _sfxSources);
+    }
+
+    public void PlayALARM(string soundName)
+    {
+        PlaySound(soundName, _alarmSources);
     }
 
     public void StopBGM()
@@ -68,35 +89,27 @@ public class SoundManager : Singleton<SoundManager>
         _bgmSource.enabled = false;
     }
 
-    public void PlaySE(string _soundName)
+    async void LoadAsyncAudioClip(string soundName, Action<AudioClip> action)
     {
-        LoadAsyncAudioClip(_soundName, (result) => { _sfxSources.PlayOneShot(result); });
-    }
-
-    public void PlayALARM(string _soundName)
-    {
-        LoadAsyncAudioClip(_soundName, (result) => { _alarmSources.PlayOneShot(result); });
-    }
-
-    async void LoadAsyncAudioClip(string _soundName, Action<AudioClip> action)
-    {
-        if (_audioClips.TryGetValue(_soundName, out AudioClip audioClip))
+        if (_audioClips.TryGetValue(soundName, out AudioClip audioClip))
         {
             action?.Invoke(audioClip);
         }
         else
         {
-            AsyncOperationHandle<AudioClip> handle = Addressables.LoadAssetAsync<AudioClip>(_soundName);
+            AsyncOperationHandle<AudioClip> handle = Addressables.LoadAssetAsync<AudioClip>(soundName);
             await handle.Task;
 
-            if (handle.Status.Equals(AsyncOperationStatus.Succeeded))
+            if (handle.Status == AsyncOperationStatus.Succeeded)
             {
                 AudioClip result = Instantiate(handle.Result);
-                _audioClips.Add(_soundName, result);
+                _audioClips.Add(soundName, result);
                 action?.Invoke(result);
             }
             else
+            {
                 Debug.LogError(handle.OperationException);
+            }
 
 #if UNITY_WEBGL
             Addressables.Release(handle);
@@ -104,89 +117,44 @@ public class SoundManager : Singleton<SoundManager>
         }
     }
 
-    #region tab change event in web brower
-
-    public void OnWebGLTabChangeEvent(string _state)
+    public void OnWebGLTabChangeEvent(string state)
     {
-        if (_state.Equals("focus"))
-            OnMasterVolumeMute(false);
-        else
-            OnMasterVolumeMute(true);
+        bool isMute = state.Equals("blur");
+        OnMasterVolumeMute(isMute);
     }
 
-    #endregion
-
-    public void OnMasterVolumeMute(bool _isMute)
+    public void OnMasterVolumeMute(bool isMute)
     {
-        if (!_isMute)
-        {
-            _audioMixer.SetFloat(Volume.MASTER, _bgmDBVolume);
-            return;
-        }
-
-        _audioMixer.SetFloat(Volume.MASTER, Volume.MUTE);
+        _audioMixer.SetFloat(Volume.MASTER, isMute ? Volume.MUTE : _bgmDBVolume);
     }
 
     public void SetVolume(string volumeName, float value)
     {
-        float dbValue;
-        if (value < 0.01f)
-        {
-            dbValue = Volume.MUTE;
-        }
-        else
-        {
-            dbValue = Mathf.Lerp(Volume.MIN, Volume.MAX, value);
-        }
+        float dbValue = value < 0.01f ? Volume.MUTE : Mathf.Lerp(Volume.MIN, Volume.MAX, value);
 
         switch (volumeName)
         {
             case Volume.MASTER:
                 _masterDBVolume = dbValue;
-                _audioMixer.SetFloat(Volume.MASTER, _masterDBVolume);
                 break;
             case Volume.BGM:
                 _bgmDBVolume = dbValue;
-                _audioMixer.SetFloat(Volume.BGM, _bgmDBVolume);
                 break;
             case Volume.SFX:
                 _sfxDBVolume = dbValue;
-                _audioMixer.SetFloat(Volume.SFX, _sfxDBVolume);
                 break;
             case Volume.ALARM:
                 _alarmDBVolume = dbValue;
-                _audioMixer.SetFloat(Volume.ALARM, _alarmDBVolume);
                 break;
         }
+
+        _audioMixer.SetFloat(volumeName, dbValue);
     }
 
     public float GetVolume(string volumeName)
     {
-        float dbVolume = 0f;
-        switch (volumeName)
-        {
-            case Volume.MASTER:
-                _audioMixer.GetFloat(Volume.MASTER, out dbVolume);
-                break;
-            case Volume.BGM:
-                _audioMixer.GetFloat(Volume.BGM, out dbVolume);
-                break;
-            case Volume.SFX:
-                _audioMixer.GetFloat(Volume.SFX, out dbVolume);
-                break;
-            case Volume.ALARM:
-                _audioMixer.GetFloat(Volume.ALARM, out dbVolume);
-                break;
-        }
-
-        if (dbVolume <= Volume.MIN)
-        {
-            return 0f;
-        }
-        else
-        {
-            return Mathf.InverseLerp(Volume.MIN, Volume.MAX, dbVolume);
-        }
+        _audioMixer.GetFloat(volumeName, out float dbVolume);
+        return dbVolume <= Volume.MIN ? 0f : Mathf.InverseLerp(Volume.MIN, Volume.MAX, dbVolume);
     }
 
     public void SaveVolume()
