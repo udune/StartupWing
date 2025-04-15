@@ -1,109 +1,91 @@
-﻿using System.Collections;
+using System;
 using System.Collections.Generic;
 using UnityEngine;
-using UnityEngine.UI;
-using System.Reflection;
-using System;
-using UnityEngine.EventSystems;
-
 
 public class UIManager : Singleton<UIManager>
 {
- 
-    const string UIString = "UI";
+    private const string UIString = "UI";
+    private Dictionary<string, GameObject> UIList = new Dictionary<string, GameObject>();
 
-    Dictionary<string, GameObject> UIList = new Dictionary<string, GameObject>();
-
+    // Get the UI if it exists, otherwise create it
     public T GetUI<T>(Transform parent = null) where T : Component
     {
-        if (UIList.ContainsKey(typeof(T).Name) && UIList[typeof(T).Name] != null)
-            return UIList[typeof(T).Name].GetComponent<T>();
-        else
-            return CreateUI<T>(parent);
+        string className = typeof(T).Name;
+        
+        // If UI already exists in the list, return it
+        if (UIList.TryGetValue(className, out GameObject uiObject) && uiObject != null)
+            return uiObject.GetComponent<T>();
+
+        // Otherwise, create and return a new UI
+        return CreateUI<T>(parent);
     }
+
+    // Create a new UI and add it to the list
     public T CreateUI<T>(Transform parent = null)
     {
         string className = typeof(T).Name;
 
+        // Remove the old UI if it exists
         if (UIList.ContainsKey(className))
-        {
             UIList.Remove(className);
-        }
 
-        GameObject loadObject = LoadUI(className);
-        GameObject go = Instantiate(loadObject, parent);
+        // Load, instantiate, and add to the UI list
+        GameObject loadedUI = LoadUI(className);
+        if (loadedUI == null) return null;
 
-        AddUI<T>(go);
+        GameObject newUI = Instantiate(loadedUI, parent);
+        AddUI<T>(newUI);
 
-        return UIList[className].GetComponent<T>();
-
+        return newUI.GetComponent<T>();
     }
-    GameObject LoadUI(string className)
+
+    // Load the UI prefab from the Resources folder
+    private GameObject LoadUI(string className)
     {
-
-        GameObject loadObject = null;
-
         string path = System.IO.Path.Combine(UIString, className);
+        GameObject loadObject = Resources.Load<GameObject>(path);
 
-        try
-        {
-            loadObject = Resources.Load<GameObject>(path);
-
-        }
-        catch (Exception e)
-        {
-            Debug.Log("Failed Load UI :" + e.Message);
-        }
+        if (loadObject == null)
+            Debug.LogError($"Failed to load UI: {className} at {path}");
 
         return loadObject;
-
     }
+
+    // Add the UI GameObject to the dictionary
     public void AddUI<T>(GameObject go)
     {
         string className = typeof(T).Name;
-        if (UIList.ContainsKey(className))
-        {
-            UIList[className] = go;
-        }
-        else
-        {
-            UIList.Add(className, go);
-        }
         
+        // If the UI exists, update it; otherwise, add it
+        if (UIList.ContainsKey(className))
+            UIList[className] = go;
+        else
+            UIList.Add(className, go);
     }
+
+    // Remove a specific UI from the dictionary
     public void RemoveUI<T>()
     {
         string className = typeof(T).Name;
-        if (UIList.ContainsKey(className))
+        
+        if (UIList.TryGetValue(className, out GameObject uiObject) && uiObject != null)
         {
-            if (UIList[className].gameObject != null)
-            {
-                Destroy(UIList[className]);
-                UIList.Remove(className);
-            }
+            Destroy(uiObject);
+            UIList.Remove(className);
         }
     }
-    public bool isUIExist<T>()
-    {
-        if (UIList.ContainsKey(typeof(T).Name) && UIList[typeof(T).Name] != null)
-            return true;
-        else
-            return false;
-    }
 
+    // Check if a UI exists in the list
+    public bool IsUIExist<T>()
+    {
+        return UIList.ContainsKey(typeof(T).Name) && UIList[typeof(T).Name] != null;
+    }
 
     #region Toast
-    public void OpenToast(string toast, float timer = 3f, bool Center = true)
+    public void OpenToast(string toast, float timer = 3f, bool center = true)
     {
-        UIToast Toast = null;
-
-        Toast = CreateUI<UIToast>();
-
-        Toast.SetToast(toast, timer, Center);
+        UIToast toastUI = CreateUI<UIToast>();
+        toastUI.SetToast(toast, timer, center);
     }
     #endregion
-  
-   
-
-   
 }
