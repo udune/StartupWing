@@ -19,19 +19,16 @@ public class PlayerManager : MonoBehaviour
     public event Action<GameObject> OnCreateAvatarEvent = null;
 
     [HideInInspector] public GameObject _playerAvatarObject = null;
-    [SerializeField] HUD HUD;
-    [SerializeField] PlayerView _playerView;
-    [SerializeField] EmojiIconController _emojiIconController;
+    [SerializeField] private HUD HUD;
+    [SerializeField] private PlayerView _playerView;
+    [SerializeField] private EmojiIconController _emojiIconController;
 
     private Camera _uiCamera => Camera.main;
     private PhotonView _pv;
     private CharacterAnimationModel _animationModel;
     private AvatarModelController _avatarModelController;
 
-    public static void SetPlayerData(PlayerData data)
-    {
-        _playerData = data;
-    }
+    public static void SetPlayerData(PlayerData data) => _playerData = data;
 
     private void Awake()
     {
@@ -39,6 +36,7 @@ public class PlayerManager : MonoBehaviour
         _pv = GetComponent<PhotonView>();
         _rpcModel = gameObject.AddComponent<RpcModel>();
         _rpcModel.OnEmojiWobbleup = UIEmotionPresenter.OnEmojiWobbleup;
+
         _animationModel = new CharacterAnimationModel();
         _avatarModelController = new AvatarModelController();
     }
@@ -58,7 +56,6 @@ public class PlayerManager : MonoBehaviour
     public async void PlayerAvatarCreate(Transform respawn = null)
     {
         Vector3 position = respawn?.position ?? Vector3.zero;
-
         _playerAvatarObject = await _avatarModelController.CreateModel(AppConfig.AppSettings.defaultAvatarKey, position, transform);
 
         if (_playerAvatarObject == null)
@@ -67,6 +64,12 @@ public class PlayerManager : MonoBehaviour
             return;
         }
 
+        ConfigurePlayerAvatar(respawn);
+        OnCreateAvatarEvent?.Invoke(_playerAvatarObject);
+    }
+
+    private void ConfigurePlayerAvatar(Transform respawn)
+    {
         if (respawn == null)
         {
             _playerAvatarObject.transform.eulerAngles = Vector3.zero;
@@ -84,35 +87,43 @@ public class PlayerManager : MonoBehaviour
     {
         if (_pv.IsMine)
         {
-            GameObject camTarget = transform.Find("CamTarget")?.gameObject ?? new GameObject("CamTarget");
-            camTarget.transform.SetParent(avatar.transform);
-            camTarget.transform.localPosition = new Vector3(0, 1, 0);
-            camTarget.transform.localRotation = quaternion.identity;
-
-            avatar.AddComponent<CharacterController>();
-            avatar.tag = PlayerInfo.PLAYER_TAG;
-            SetLayerRecursively(avatar, LayerMask.NameToLayer(PlayerInfo.PLAYER_TAG));
-
-            NavMeshAgent navmesh = avatar.gameObject.AddComponent<NavMeshAgent>();
-            navmesh.obstacleAvoidanceType = ObstacleAvoidanceType.NoObstacleAvoidance;
-            navmesh.autoTraverseOffMeshLink = false;
+            SetupPlayerAvatar(avatar);
         }
         else
         {
-            avatar.tag = PlayerInfo.OTHER_PLAYER_TAG;
-            SetLayerRecursively(avatar, LayerMask.NameToLayer(PlayerInfo.OTHER_PLAYER_TAG));
+            SetupOtherPlayerAvatar(avatar);
         }
 
         SetAvatarAttribute(avatar);
         SetPhotonObserved(avatar);
-
         SubscribeRPC();
         SubscribeVideoChat();
         SubscribeVoiceChat();
 
-        OnCreateAvatarEvent?.Invoke(avatar);
         _avatarModelController.SetAvatarData(_pv.InstantiationData);
         _playerView.SetPlayerNickname(_pv.Owner.NickName);
+    }
+
+    private void SetupPlayerAvatar(GameObject avatar)
+    {
+        GameObject camTarget = transform.Find("CamTarget")?.gameObject ?? new GameObject("CamTarget");
+        camTarget.transform.SetParent(avatar.transform);
+        camTarget.transform.localPosition = new Vector3(0, 1, 0);
+        camTarget.transform.localRotation = quaternion.identity;
+
+        avatar.AddComponent<CharacterController>();
+        avatar.tag = PlayerInfo.PLAYER_TAG;
+        SetLayerRecursively(avatar, LayerMask.NameToLayer(PlayerInfo.PLAYER_TAG));
+
+        NavMeshAgent navmesh = avatar.gameObject.AddComponent<NavMeshAgent>();
+        navmesh.obstacleAvoidanceType = ObstacleAvoidanceType.NoObstacleAvoidance;
+        navmesh.autoTraverseOffMeshLink = false;
+    }
+
+    private void SetupOtherPlayerAvatar(GameObject avatar)
+    {
+        avatar.tag = PlayerInfo.OTHER_PLAYER_TAG;
+        SetLayerRecursively(avatar, LayerMask.NameToLayer(PlayerInfo.OTHER_PLAYER_TAG));
     }
 
     private void SetAvatarAttribute(GameObject avatar)
@@ -121,7 +132,6 @@ public class PlayerManager : MonoBehaviour
         HUD.SetTargetPoint(attribute.HudTransform, _uiCamera, attribute.headOffset);
 
         _animationModel.Animator = attribute.Animator;
-
         GeneralAnimationBehaviour[] animationBehaviours = attribute.Animator.GetBehaviours<GeneralAnimationBehaviour>();
         foreach (var animationBehaviour in animationBehaviours)
         {
@@ -131,13 +141,22 @@ public class PlayerManager : MonoBehaviour
 
     private void SetPhotonObserved(GameObject newModel)
     {
+        AddPhotonTransformView(newModel);
+        AddPhotonAnimatorView(newModel);
+    }
+
+    private void AddPhotonTransformView(GameObject newModel)
+    {
         PhotonTransformView photonTransformView = newModel.AddComponent<PhotonTransformView>();
         photonTransformView.m_SynchronizePosition = true;
         photonTransformView.m_SynchronizeRotation = true;
         photonTransformView.m_SynchronizeScale = false;
         photonTransformView.m_UseLocal = true;
         _pv.ObservedComponents.Add(photonTransformView);
+    }
 
+    private void AddPhotonAnimatorView(GameObject newModel)
+    {
         PhotonAnimatorView photonAnimatorView = newModel.AddComponent<PhotonAnimatorView>();
         photonAnimatorView.SetLayerSynchronized(0, PhotonAnimatorView.SynchronizeType.Discrete);
         photonAnimatorView.SetParameterSynchronized(AnimationInfo.ANI_SPEED, PhotonAnimatorView.ParameterType.Float, PhotonAnimatorView.SynchronizeType.Discrete);
@@ -149,10 +168,9 @@ public class PlayerManager : MonoBehaviour
         _pv.ObservedComponents.Add(photonAnimatorView);
     }
 
-    void SetLayerRecursively(GameObject obj, int newLayer)
+    private void SetLayerRecursively(GameObject obj, int newLayer)
     {
         obj.layer = newLayer;
-
         foreach (Transform child in obj.transform)
         {
             SetLayerRecursively(child.gameObject, newLayer);
@@ -246,7 +264,6 @@ public class PlayerManager : MonoBehaviour
         _playerView.SetVideo(uid, muted);
     }
 
-
     private void PlayerVideoChatSetting(bool isActive)
     {
         Transform tr = _playerAvatarObject.transform;
@@ -257,14 +274,7 @@ public class PlayerManager : MonoBehaviour
             avatarObject.SetActive(isActive);
         }
 
-        if (isActive)
-        {
-            HUD.SetHeight(150f);
-        }
-        else
-        {
-            HUD.SetHeight(100f);
-        }
+        HUD.SetHeight(isActive ? 150f : 100f);
     }
 
     private void OnVideoSizeChanged(uint uid, Vector2 resolution, AgoraType type)
@@ -274,20 +284,16 @@ public class PlayerManager : MonoBehaviour
         if (type == AgoraType.Camera)
         {
             ownerUid = (int)_pv.Owner.CustomProperties[Const.User.id];
-            // uid: 0 = local user = myself
-            if (uid == 0)
+
+            if (uid == 0 && _pv.IsMine)
             {
-                if (_pv.IsMine)
-                    _playerView.SetVideoSizeChanged(resolution);
+                _playerView.SetVideoSizeChanged(resolution);
             }
-            else
+            else if (uid == (uint)ownerUid)
             {
-                if (uid == (uint)ownerUid)
-                    _playerView.SetVideoSizeChanged(resolution);
+                _playerView.SetVideoSizeChanged(resolution);
             }
         }
-
-        Debug.Log($"[PlyaerManager] OnVideoSizeChanged - uid: {uid}, ownerUid: {ownerUid}, resolution: {resolution}, type: {type}");
     }
 
     #endregion
